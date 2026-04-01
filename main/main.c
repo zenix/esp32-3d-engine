@@ -29,7 +29,6 @@
 void app_main(void)
 {
     fp_lut_init();
-    engine3d_init();
     ssd1306_init(SDA_IO, SCL_IO, I2C_FREQ_HZ);
 
     uint8_t angle = 0;
@@ -37,12 +36,17 @@ void app_main(void)
 
     for (;;) {
         memset(fb, 0, sizeof(fb));
-        engine3d_draw_cube(fb, angle);
-        ssd1306_flush(fb);
-        angle += 2;
 
-        // Yield briefly so the FreeRTOS idle/watchdog tasks can run.
-        // Remove or reduce to maximise FPS (the I2C flush is the real bottleneck).
+        transform_t t = {
+            .x     = 0,
+            .y     = 0,
+            .z     = 180,
+            .angle = angle,
+        };
+        engine3d_draw_mesh(fb, &MESH_CUBE, &t);
+        ssd1306_flush(fb);
+
+        angle += 2;
         vTaskDelay(1);
     }
 }

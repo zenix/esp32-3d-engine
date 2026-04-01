@@ -35,10 +35,28 @@ Port is autodetected. Pass an explicit port as a second argument if needed.
 main/
   fixed_math.h/c   Q16.16 fixed-point types, macros, 256-entry sin LUT
   ssd1306.h/c      SSD1306 I2C driver (init + full-frame flush)
-  engine3d.h/c     3D pipeline — axis-angle rotation, perspective projection, Bresenham line
+  engine3d.h/c     3D pipeline — mesh API, axis-angle rotation, perspective projection, Bresenham line
   main.c           app_main — rotating cube demo
 esp.sh             Build/flash/monitor helper
 ```
+
+## Mesh API
+
+```c
+// Define a mesh (keep data const — it lives in flash)
+static const int8_t my_verts[][3] = { ... };
+static const uint8_t my_edges[][2] = { ... };
+const mesh_t MY_MESH = { my_verts, my_edges, n_verts, n_edges };
+
+// Draw it each frame
+transform_t t = { .x = 0, .y = 0, .z = 180, .angle = angle };
+engine3d_draw_mesh(fb, &MY_MESH, &t);
+```
+
+`mesh_t` holds any geometry up to `ENGINE3D_MAX_VERTS` (64) vertices.  
+`transform_t` fields: `x`/`y` shift on screen, `z` controls depth/size (larger = smaller), `angle` drives rotation (0–255 = 0–360°).  
+Multiple meshes can be drawn per frame by calling `engine3d_draw_mesh` multiple times before `ssd1306_flush`.  
+`MESH_CUBE` is provided as a built-in (±25-unit cube, 8 verts / 12 edges).
 
 ## Key design rules
 
@@ -55,7 +73,7 @@ Do **not** revert to three independent Euler angles (ax, ay, az incremented sepa
 
 The current approach uses two stages:
 
-1. **Constant Rx(45°) pre-tilt** — applied once at startup in `engine3d_init()`, stored in `VERTS_TILTED`. This shifts all face normals off the Z (view) axis so no face can ever appear directly face-on to the camera.
-2. **Rodrigues axis-angle rotation** around fixed axis `k = normalize([3,2,1])` — a single `uint8_t angle` drives the rotation each frame. The matrix is built once per frame from the LUT and applied to all 8 vertices.
+1. **Constant Rx(45°) pre-tilt** — applied per-vertex inside `engine3d_draw_mesh` using the compile-time constant `BASE_SC = 46341` (sin/cos 45° in Q16.16). This shifts all face normals off the Z (view) axis so no face can ever appear directly face-on to the camera.
+2. **Rodrigues axis-angle rotation** around fixed axis `k = normalize([3,2,1])` — a single `uint8_t angle` from `transform_t` drives the rotation. The matrix is built once per `engine3d_draw_mesh` call and applied to all vertices.
 
-`engine3d_init()` must be called after `fp_lut_init()` and before the render loop.
+`fp_lut_init()` must be called before the first `engine3d_draw_mesh()` call. There is no separate engine init step.

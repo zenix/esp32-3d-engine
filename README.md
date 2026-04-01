@@ -1,6 +1,6 @@
 # ESP32-C3 3D Wireframe Engine
 
-A dependency-free 3D wireframe engine for the ESP32-C3 + SSD1306 OLED display, written in C using ESP-IDF. Renders a tumbling wireframe cube at interactive framerates with no hardware FPU.
+A dependency-free 3D wireframe engine for the ESP32-C3 + SSD1306 OLED display, written in C using ESP-IDF. Renders wireframe meshes at interactive framerates with no hardware FPU.
 
 ## Hardware
 
@@ -50,13 +50,47 @@ source ~/.espressif/v5.5.3/esp-idf/export.sh
 idf.py set-target esp32c3
 ```
 
+## Mesh API
+
+Define any wireframe object as a `const` vertex + edge array (stored in flash):
+
+```c
+static const int8_t ship_verts[][3] = {
+    { 0, 20, 0}, {-15,-10, 0}, { 15,-10, 0}, { 0, -5, 0},
+};
+static const uint8_t ship_edges[][2] = {
+    {0,1}, {0,2}, {1,3}, {2,3},
+};
+const mesh_t MESH_SHIP = {ship_verts, ship_edges, 4, 4};
+```
+
+Render one or more meshes per frame, then flush:
+
+```c
+transform_t t = { .x = 0, .y = 0, .z = 180, .angle = angle };
+engine3d_draw_mesh(fb, &MESH_SHIP, &t);
+engine3d_draw_mesh(fb, &MESH_CUBE, &other_t);
+ssd1306_flush(fb);
+```
+
+`transform_t` fields:
+
+| Field | Description |
+|---|---|
+| `x`, `y` | Screen position offset (0,0 = centre) |
+| `z` | Depth — larger = further away = smaller on screen |
+| `angle` | Rotation, 0–255 maps to 0–360° |
+
+Up to 64 vertices per mesh. Multiple meshes can be drawn each frame.  
+`MESH_CUBE` is provided as a built-in (±25-unit cube, 8 verts / 12 edges).
+
 ## Project structure
 
 ```
 main/
   fixed_math.h/c   Q16.16 fixed-point types, macros, 256-entry sin LUT
   ssd1306.h/c      SSD1306 I2C driver (init + full-frame flush)
-  engine3d.h/c     3D pipeline — rotation, projection, rasterisation
+  engine3d.h/c     3D pipeline — mesh API, rotation, projection, rasterisation
   main.c           Entry point — rotating cube demo
 esp.sh             Build / flash / monitor helper script
 ```
