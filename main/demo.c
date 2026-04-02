@@ -173,6 +173,8 @@ static void update_page(game_t *g, fp_t dt)
     case 4:
         if (input_held(BTN_LEFT))  g->camera.yaw -= 2;
         if (input_held(BTN_RIGHT)) g->camera.yaw += 2;
+        if (input_held(BTN_UP)   && g->camera.z > -200) g->camera.z -= 2;
+        if (input_held(BTN_DOWN) && g->camera.z <  200) g->camera.z += 2;
         spin_all(g, 2);
         entity_update_positions(g);
         break;
@@ -220,7 +222,7 @@ static void render_page(game_t *g, uint8_t fb[8][128])
         break;
     }
     case 4:
-        font_draw_string(fb, 0, 56, "L/R:YAW  DEPTH SORT");
+        font_draw_string(fb, 0, 56, "L/R:YAW U/D:DEPTH");
         break;
     case 5:
         particle_draw(fb, 0, 0, 0);
