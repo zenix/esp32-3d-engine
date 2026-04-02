@@ -39,10 +39,21 @@ static const uint8_t _cube_faces[12][3] = {
     {3,7,6},{3,6,2},   // f8,f9  top   (+Y)
     {4,0,1},{4,1,5},   // f10,f11 bottom (-Y)
 };
-static const uint8_t _cube_edge_face[12] = {
-    2, 3, 3, 2,    // edges 0-3: back ring
-    0, 1, 1, 0,    // edges 4-7: front ring
-    6, 4, 5, 7,    // edges 8-11: pillars
+// Each row: {face_a, face_b} — both faces sharing this edge.
+// An edge is culled only if both faces are back-facing.
+static const uint8_t _cube_edge_face[12][2] = {
+    { 2, 10},  // edge  0 (0-1): back(-Z)  + bottom(-Y)
+    { 3,  4},  // edge  1 (1-2): back(-Z)  + right(+X)
+    { 3,  9},  // edge  2 (2-3): back(-Z)  + top(+Y)
+    { 2,  7},  // edge  3 (3-0): back(-Z)  + left(-X)
+    { 0, 11},  // edge  4 (4-5): front(+Z) + bottom(-Y)
+    { 0,  5},  // edge  5 (5-6): front(+Z) + right(+X)
+    { 1,  8},  // edge  6 (6-7): front(+Z) + top(+Y)
+    { 1,  6},  // edge  7 (7-4): front(+Z) + left(-X)
+    { 6, 10},  // edge  8 (0-4): left(-X)  + bottom(-Y)
+    { 4, 11},  // edge  9 (1-5): right(+X) + bottom(-Y)
+    { 5,  9},  // edge 10 (2-6): right(+X) + top(+Y)
+    { 7,  8},  // edge 11 (3-7): left(-X)  + top(+Y)
 };
 const mesh_t MESH_CUBE_CULLED = {
     .verts     = _cube_verts,

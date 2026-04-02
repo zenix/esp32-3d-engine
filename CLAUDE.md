@@ -92,8 +92,8 @@ Built-in meshes (all in `meshes.h`): `MESH_CUBE`, `MESH_CUBE_CULLED`, `MESH_SHIP
 Add face + edge-face data to a mesh to enable culling. Set `faces=NULL` to draw all edges unconditionally (default for all built-in meshes):
 
 ```c
-static const uint8_t my_faces[][3] = { {0,1,2}, ... };  // CCW winding from outside
-static const uint8_t my_edge_face[] = { 0, 0, 0, ... }; // face index per edge; 0xFF = always draw
+static const uint8_t my_faces[][3] = { {0,1,2}, ... };    // CCW winding from outside
+static const uint8_t my_edge_face[][2] = { {0,1}, ... };  // up to 2 face indices per edge; 0xFF = unused slot
 const mesh_t MY_MESH = {
     .verts = v, .edges = e, .n_verts = N, .n_edges = M,
     .faces = my_faces, .edge_face = my_edge_face, .n_faces = F,

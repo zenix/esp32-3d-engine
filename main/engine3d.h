@@ -18,7 +18,7 @@ typedef struct {
     uint8_t n_edges;
     // Backface culling (optional)
     const uint8_t (*faces)[3];   // triangle faces as vertex indices
-    const uint8_t *edge_face;    // edge_face[i]: face index for edge i, 0xFF = always draw
+    const uint8_t (*edge_face)[2]; // edge_face[i][0..1]: up to 2 face indices per edge; 0xFF = unused slot
     uint8_t n_faces;
 } mesh_t;
 

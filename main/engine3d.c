@@ -194,11 +194,22 @@ void engine3d_draw_mesh(uint8_t fb[8][128], const mesh_t *mesh, const transform_
 
     // ── Rasterise edges ───────────────────────────────────────────────────────
     for (int e = 0; e < mesh->n_edges; e++) {
-        // Task 4: skip edge if its face is back-facing.
+        // Task 4: skip edge only if ALL associated faces are back-facing.
+        // Each edge maps to up to 2 faces; 0xFF in a slot means unused.
+        // If both slots are 0xFF (or faces==NULL), draw unconditionally.
         if (mesh->edge_face) {
-            uint8_t fi = mesh->edge_face[e];
-            if (fi != 0xFF && (face_skip[fi >> 3] & (1u << (fi & 7))))
-                continue;
+            bool has_face    = false;
+            bool has_visible = false;
+            for (int f = 0; f < 2; f++) {
+                uint8_t fi = mesh->edge_face[e][f];
+                if (fi == 0xFF) continue;
+                has_face = true;
+                if (!(face_skip[fi >> 3] & (1u << (fi & 7)))) {
+                    has_visible = true;
+                    break;
+                }
+            }
+            if (has_face && !has_visible) continue;
         }
 
         uint8_t ia = mesh->edges[e][0];
