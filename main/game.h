@@ -74,9 +74,3 @@ void entity_update_positions(game_t *g);
 // Draw all active entities using the current camera state.
 void entity_draw_all(game_t *g, uint8_t fb[8][128]);
 
-// ── Built-in scenes ───────────────────────────────────────────────────────────
-// Provided as starting points — override or replace in your own game.c files.
-extern const scene_t SCENE_TITLE;
-extern const scene_t SCENE_GAMEPLAY;
-extern const scene_t SCENE_PAUSE;
-extern const scene_t SCENE_GAMEOVER;
