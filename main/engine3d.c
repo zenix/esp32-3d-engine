@@ -170,27 +170,24 @@ void engine3d_draw_mesh(uint8_t fb[8][128], const mesh_t *mesh, const transform_
     }
 
     // ── Task 4: backface culling ──────────────────────────────────────────────
-    // Only cull when all three face vertices are in front of the near plane and
-    // on-screen — off-screen vertices produce wrong cross-product signs.
+    // Use view-space 3D normal Z component: nz = (e1 × e2).z
+    // where e1 = v1-v0, e2 = v2-v0 in view space (Q16.16).
+    // nz ≤ 0 → face normal points away from camera → cull.
+    // This is robust to off-screen vertices and near-plane crossings.
     uint8_t face_skip[16] = {0};
     if (mesh->faces && mesh->n_faces > 0) {
         for (int f = 0; f < mesh->n_faces; f++) {
             uint8_t i0 = mesh->faces[f][0];
             uint8_t i1 = mesh->faces[f][1];
             uint8_t i2 = mesh->faces[f][2];
-            // Skip culling if any vertex is behind near plane or off-screen.
-            if (vz_vs[i0] < INT_FP(NEAR_PLANE) ||
-                vz_vs[i1] < INT_FP(NEAR_PLANE) ||
-                vz_vs[i2] < INT_FP(NEAR_PLANE)) continue;
-            if ((unsigned)sx[i0] >= 128u || (unsigned)sy[i0] >= 64u ||
-                (unsigned)sx[i1] >= 128u || (unsigned)sy[i1] >= 64u ||
-                (unsigned)sx[i2] >= 128u || (unsigned)sy[i2] >= 64u) continue;
-            int32_t ax = sx[i1] - sx[i0];
-            int32_t ay = sy[i1] - sy[i0];
-            int32_t bx = sx[i2] - sx[i0];
-            int32_t by = sy[i2] - sy[i0];
-            int32_t cross = ax * by - ay * bx;
-            if (cross > 0)
+            // View-space edge vectors (Q16.16, shift down to avoid int64 overflow)
+            fp_t ax = (vx_vs[i1] - vx_vs[i0]) >> 8;
+            fp_t ay = (vy_vs[i1] - vy_vs[i0]) >> 8;
+            fp_t bx = (vx_vs[i2] - vx_vs[i0]) >> 8;
+            fp_t by = (vy_vs[i2] - vy_vs[i0]) >> 8;
+            // Z component of cross product (only component needed for dot with [0,0,1])
+            int32_t nz = (int32_t)ax * by - (int32_t)ay * bx;
+            if (nz >= 0)
                 face_skip[f >> 3] |= (uint8_t)(1u << (f & 7));
         }
     }

@@ -9,6 +9,8 @@
 
 // Wireframe cube ±25 units.  8 verts, 12 edges, 12 tri-faces (backface culling enabled).
 extern const mesh_t MESH_CUBE;
+// Same geometry as MESH_CUBE but with backface culling enabled.
+extern const mesh_t MESH_CUBE_CULLED;
 
 // Arrow/wedge shape pointing in +Z.  6 verts, 8 edges.
 extern const mesh_t MESH_SHIP;

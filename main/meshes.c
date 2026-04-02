@@ -30,6 +30,30 @@ const mesh_t MESH_CUBE = {
     .n_faces   = 0,
 };
 
+// MESH_CUBE with backface culling enabled — for culling demos.
+static const uint8_t _cube_faces[12][3] = {
+    {4,5,6},{4,6,7},   // f0,f1  front (+Z)
+    {1,0,3},{1,3,2},   // f2,f3  back  (-Z)
+    {5,1,2},{5,2,6},   // f4,f5  right (+X)
+    {0,4,7},{0,7,3},   // f6,f7  left  (-X)
+    {3,7,6},{3,6,2},   // f8,f9  top   (+Y)
+    {4,0,1},{4,1,5},   // f10,f11 bottom (-Y)
+};
+static const uint8_t _cube_edge_face[12] = {
+    2, 3, 3, 2,    // edges 0-3: back ring
+    0, 1, 1, 0,    // edges 4-7: front ring
+    6, 4, 5, 7,    // edges 8-11: pillars
+};
+const mesh_t MESH_CUBE_CULLED = {
+    .verts     = _cube_verts,
+    .edges     = _cube_edges,
+    .n_verts   = 8,
+    .n_edges   = 12,
+    .faces     = _cube_faces,
+    .edge_face = _cube_edge_face,
+    .n_faces   = 12,
+};
+
 // ── MESH_SHIP — arrowhead/wedge pointing +Z ───────────────────────────────────
 // 6 vertices, 8 edges. Fits int8_t. Looks like a spaceship from the side.
 static const int8_t _ship_verts[6][3] = {

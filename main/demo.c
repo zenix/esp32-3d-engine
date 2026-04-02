@@ -69,7 +69,7 @@ static void enter_page(game_t *g)
     case 2:
         s_mesh_idx   = 0;
         s_mesh_timer = MESH_HOLD;
-        spawn(g, &MESH_CUBE, ETYPE_NONE, 0, 180, AXIS_DEFAULT, 128);
+        spawn(g, &MESH_CUBE_CULLED, ETYPE_NONE, 0, 180, AXIS_DEFAULT, 128);
         break;
 
     case 3: {
@@ -154,7 +154,7 @@ static void update_page(game_t *g, fp_t dt)
             s_mesh_timer = MESH_HOLD;
             s_mesh_idx   = (s_mesh_idx + 1) % 2;
             kill_all(g);
-            spawn(g, s_mesh_idx == 0 ? &MESH_CUBE : &MESH_ASTEROID,
+            spawn(g, s_mesh_idx == 0 ? &MESH_CUBE_CULLED : &MESH_ASTEROID,
                   ETYPE_NONE, 0, 180, AXIS_DEFAULT, 128);
         }
         break;
