@@ -1,5 +1,6 @@
 #include "game.h"
 #include "demo.h"
+#include "asteroid.h"
 #include "input.h"
 #include "font.h"
 #include "sound.h"
@@ -12,7 +13,7 @@ void game_init(game_t *g)
 {
     memset(g, 0, sizeof(*g));
     g->lives = 3;
-    game_switch_scene(g, &SCENE_DEMO);
+    game_switch_scene(g, &SCENE_ASTEROID_TITLE);
 }
 
 void game_switch_scene(game_t *g, const scene_t *next)

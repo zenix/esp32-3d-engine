@@ -41,10 +41,10 @@ void input_poll(void)
         // Shift in new sample (active-low: 0 = pressed).
         shift[i] = (uint8_t)((shift[i] << 1) | gpio_get_level(BTN_GPIO[i]));
 
-        // Update stable state only when all 8 samples agree.
-        if (shift[i] == 0x00) {
+        // Update stable state when last 3 samples agree (~99 ms at 30 fps).
+        if ((shift[i] & 0x07) == 0x00) {
             stable |=  (uint8_t)(1u << i);  // consistently pressed
-        } else if (shift[i] == 0xFF) {
+        } else if ((shift[i] & 0x07) == 0x07) {
             stable &= ~(uint8_t)(1u << i);  // consistently released
         }
         // Intermediate values leave stable state unchanged (transitioning).
