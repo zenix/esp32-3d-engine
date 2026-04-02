@@ -43,11 +43,12 @@ main/
   sound.h/c        LEDC PWM buzzer — non-blocking sound effects via esp_timer
   meshes.h/c       Built-in game meshes — CUBE, SHIP, ASTEROID, BULLET, DIAMOND
   scene.h          Scene/state-machine types (header-only)
-  game.h/c         Entity system, game context, built-in scenes
+  game.h/c         Generic entity system and game context (no game-specific code)
   collision.h/c    Sphere-sphere and AABB collision detection
   particle.h/c     Single-pixel particle burst effects
-  demo.h/c         6-page interactive feature demo (boots by default)
-  main.c           app_main — fixed-timestep game loop
+  demo.h/c         6-page interactive feature demo
+  asteroid.h/c     Asteroid Blaster game (boots by default)
+  main.c           app_main — fixed-timestep game loop; wires starting scene
 sdkconfig.defaults Project-level sdkconfig overrides (stack size, tick rate)
 esp.sh             Build/flash/monitor helper
 ```
@@ -154,7 +155,8 @@ sound_stop();                        // silence immediately
 
 ```c
 static game_t g;   // MUST be static — too large for the stack
-game_init(&g);     // clears state, enters SCENE_DEMO
+game_init(&g);                          // zero-initialise state
+game_switch_scene(&g, &MY_START_SCENE); // pick the first scene in main.c
 ```
 
 ### Entities
@@ -187,7 +189,7 @@ const scene_t MY_SCENE = {
 game_switch_scene(&g, &MY_SCENE);
 ```
 
-Built-in scenes: `SCENE_DEMO`, `SCENE_TITLE`, `SCENE_GAMEPLAY`, `SCENE_PAUSE`, `SCENE_GAMEOVER`.
+Game scenes live in their own files: `SCENE_DEMO` (`demo.h`), `SCENE_ASTEROID_TITLE/PLAY/OVER` (`asteroid.h`). `game.h/c` contains no scenes — add your own the same way.
 
 ### Collision
 

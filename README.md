@@ -69,18 +69,28 @@ main/
   sound.h/c        LEDC PWM buzzer — non-blocking sound effects
   meshes.h/c       Built-in game meshes — CUBE, SHIP, ASTEROID, BULLET, DIAMOND
   scene.h          Scene/state-machine types (header-only)
-  game.h/c         Entity system, game context, built-in scenes
+  game.h/c         Generic entity system and game context (no game-specific code)
   collision.h/c    Sphere-sphere collision detection
   particle.h/c     Single-pixel particle burst effects
-  demo.h/c         6-page interactive feature demo (boots by default)
-  main.c           app_main — fixed-timestep game loop
+  demo.h/c         6-page interactive feature demo
+  asteroid.h/c     Asteroid Blaster game (boots by default)
+  main.c           app_main — fixed-timestep game loop; wires starting scene
 sdkconfig.defaults Project-level sdkconfig overrides
 esp.sh             Build/flash/monitor helper
 ```
 
+## What boots by default
+
+The firmware boots into **Asteroid Blaster** — a 3D space shooter. Use the D-pad to move your ship, ACTION to fire bullets, destroy asteroids for points, and collect diamonds for bonuses. Difficulty scales with score.
+
+To switch to the feature demo, change the starting scene in `main.c`:
+```c
+game_switch_scene(&g_game, &SCENE_DEMO);  // instead of SCENE_ASTEROID_TITLE
+```
+
 ## Feature Demo
 
-The firmware boots into a 6-page interactive demo. Press **ACTION** to advance pages:
+The demo showcases 6 pages of engine capabilities. Press **ACTION** to advance pages:
 
 | Page | Feature demonstrated |
 |---|---|
@@ -116,7 +126,7 @@ const mesh_t MY_MESH = {
 
 All fields zero-initialise to sensible defaults (`AXIS_DEFAULT`, scale 1.0×).
 
-Built-in meshes: `MESH_CUBE`, `MESH_SHIP`, `MESH_ASTEROID`, `MESH_BULLET`, `MESH_DIAMOND` (all in `meshes.h`).
+Built-in meshes: `MESH_CUBE`, `MESH_CUBE_CULLED`, `MESH_SHIP`, `MESH_ASTEROID`, `MESH_BULLET`, `MESH_DIAMOND` (all in `meshes.h`). `MESH_CUBE_CULLED` has backface culling enabled; the rest are full wireframe.
 
 ## Game API
 
@@ -134,6 +144,7 @@ if (input_just_pressed(BTN_ACTION)) fire();
 ```c
 static game_t g;   // must be static
 game_init(&g);
+game_switch_scene(&g, &MY_START_SCENE);  // wire starting scene in main.c
 
 entity_t *e = entity_spawn(&g, &MESH_SHIP, ETYPE_PLAYER);
 e->fx = INT_FP(0);  e->fz = INT_FP(160);
