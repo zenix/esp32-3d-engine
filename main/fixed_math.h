@@ -9,7 +9,7 @@ typedef int32_t fp_t;
 #define FP_ONE          (1 << FP_SHIFT)
 
 // Convert between plain integer and Q16.16
-#define INT_FP(x)       ((fp_t)(x) << FP_SHIFT)
+#define INT_FP(x)       ((fp_t)((int32_t)(x) * (int32_t)FP_ONE))
 #define FP_INT(x)       ((int32_t)(x) >> FP_SHIFT)
 
 // Arithmetic — add/sub are plain int32 ops (no overhead).

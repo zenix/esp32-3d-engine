@@ -55,9 +55,7 @@ static void play_note(uint16_t freq_hz)
     ledc_update_duty(LEDC_SPEED, LEDC_CHANNEL);
 }
 
-// Called from esp_timer callback — may run in ISR context (IRAM).
-// Keep minimal: only LEDC register writes and timer restart.
-static void IRAM_ATTR timer_cb(void *arg)
+static void timer_cb(void *arg)
 {
     if (!s_seq) return;
 
@@ -99,7 +97,7 @@ void sound_init(void)
     esp_timer_create_args_t timer_args = {
         .callback        = timer_cb,
         .arg             = NULL,
-        .dispatch_method = ESP_TIMER_ISR,
+        .dispatch_method = ESP_TIMER_TASK,
         .name            = "snd",
     };
     esp_timer_create(&timer_args, &s_timer);
