@@ -83,7 +83,9 @@ engine3d_draw_mesh(fb, &MY_MESH, &t);
 
 All fields zero-initialise to sensible defaults.
 
-Built-in meshes (all in `meshes.h`): `MESH_CUBE`, `MESH_SHIP`, `MESH_ASTEROID`, `MESH_BULLET`, `MESH_DIAMOND`.
+Built-in meshes (all in `meshes.h`): `MESH_CUBE`, `MESH_CUBE_CULLED`, `MESH_SHIP`, `MESH_ASTEROID`, `MESH_BULLET`, `MESH_DIAMOND`.
+
+`MESH_CUBE_CULLED` is identical to `MESH_CUBE` but has face + edge-face data populated for backface culling. Use it when you want a solid-looking cube. All other built-in meshes have `faces=NULL` (full wireframe).
 
 ### Optional backface culling
 
@@ -143,6 +145,8 @@ sound_play(SFX_PICKUP);
 sound_play(SFX_GAMEOVER);
 sound_stop();                        // silence immediately
 ```
+
+**Minimum frequency:** ESP32-C3 LEDC with 8-bit resolution cannot go below ~1220 Hz. All SFX frequencies are set above this. Do not add notes below 1000 Hz.
 
 ## Entity / Scene API
 

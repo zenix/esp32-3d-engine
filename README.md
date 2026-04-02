@@ -88,7 +88,7 @@ The firmware boots into a 6-page interactive demo. Press **ACTION** to advance p
 | 2/6 | Per-mesh scale (0.5×/1×/1.5×) and rotation axis (X/Y/Z) |
 | 3/6 | Backface culling on/off comparison |
 | 4/6 | Near-plane clipping — mesh drifts through z=10 cleanly |
-| 5/6 | Camera yaw (LEFT/RIGHT) + depth-sorted overdraw |
+| 5/6 | Camera yaw (LEFT/RIGHT) + depth (UP/DOWN) + depth-sorted overdraw |
 | 6/6 | Collision detection + particle explosions + sound |
 
 ## Mesh API

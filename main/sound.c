@@ -21,13 +21,13 @@ static const note_t sfx_shoot[] = {
     {880, 40}, {440, 40}, {0, 0},
 };
 static const note_t sfx_explode[] = {
-    {200, 60}, {150, 60}, {250, 60}, {100, 80}, {180, 60}, {0, 0},
+    {2000, 60}, {1500, 60}, {2500, 60}, {1000, 80}, {1800, 60}, {0, 0},
 };
 static const note_t sfx_pickup[] = {
     {523, 60}, {659, 60}, {784, 80}, {0, 0},
 };
 static const note_t sfx_gameover[] = {
-    {440, 150}, {330, 150}, {220, 300}, {0, 0},
+    {880, 150}, {660, 150}, {440, 300}, {0, 0},
 };
 
 static const note_t * const sfx_table[SFX_COUNT] = {
