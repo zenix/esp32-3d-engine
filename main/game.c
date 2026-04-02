@@ -1,4 +1,5 @@
 #include "game.h"
+#include "demo.h"
 #include "input.h"
 #include "font.h"
 #include "sound.h"
@@ -11,7 +12,7 @@ void game_init(game_t *g)
 {
     memset(g, 0, sizeof(*g));
     g->lives = 3;
-    game_switch_scene(g, &SCENE_TITLE);
+    game_switch_scene(g, &SCENE_DEMO);
 }
 
 void game_switch_scene(game_t *g, const scene_t *next)
@@ -69,11 +70,28 @@ void entity_draw_all(game_t *g, uint8_t fb[8][128])
     else
         engine3d_set_camera(NULL);
 
+    // Task 5: depth-sort — build index array, insertion-sort by descending fz
+    // (farther entities drawn first so closer ones overdraw them correctly).
+    // Camera-relative Z: subtract camera.z when camera is active.
+    uint8_t order[MAX_ENTITIES];
+    int n = 0;
     for (int i = 0; i < MAX_ENTITIES; i++) {
-        entity_t *e = &g->entities[i];
-        if (!e->active || !e->mesh) continue;
-        engine3d_draw_mesh(fb, e->mesh, &e->transform);
+        if (g->entities[i].active && g->entities[i].mesh)
+            order[n++] = (uint8_t)i;
     }
+    fp_t cam_fz = g->camera_active ? INT_FP(g->camera.z) : 0;
+    for (int i = 1; i < n; i++) {
+        uint8_t key = order[i];
+        fp_t key_z  = g->entities[key].fz - cam_fz;
+        int j = i - 1;
+        while (j >= 0 && (g->entities[order[j]].fz - cam_fz) < key_z) {
+            order[j + 1] = order[j];
+            j--;
+        }
+        order[j + 1] = key;
+    }
+    for (int i = 0; i < n; i++)
+        engine3d_draw_mesh(fb, g->entities[order[i]].mesh, &g->entities[order[i]].transform);
 }
 
 // ── Scene: TITLE ──────────────────────────────────────────────────────────────

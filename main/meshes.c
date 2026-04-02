@@ -1,4 +1,34 @@
 #include "meshes.h"
+#include <stddef.h>  // NULL
+
+// ── MESH_CUBE — ±25-unit wireframe cube ───────────────────────────────────────
+// 8 verts, 12 edges, 12 tri-faces (2 per quad face). CCW winding from outside.
+//
+// Vertex layout:
+//   0=(-25,-25,-25)  1=(+25,-25,-25)  2=(+25,+25,-25)  3=(-25,+25,-25)  back
+//   4=(-25,-25,+25)  5=(+25,-25,+25)  6=(+25,+25,+25)  7=(-25,+25,+25)  front
+//
+// Edges 0-3: back ring  4-7: front ring  8-11: pillars
+// Faces: f0/f1=front(+Z)  f2/f3=back(-Z)  f4/f5=right(+X)
+//        f6/f7=left(-X)   f8/f9=top(+Y)   f10/f11=bottom(-Y)
+static const int8_t _cube_verts[8][3] = {
+    {-25,-25,-25}, { 25,-25,-25}, { 25, 25,-25}, {-25, 25,-25},
+    {-25,-25, 25}, { 25,-25, 25}, { 25, 25, 25}, {-25, 25, 25},
+};
+static const uint8_t _cube_edges[12][2] = {
+    {0,1},{1,2},{2,3},{3,0},   // 0-3  back ring
+    {4,5},{5,6},{6,7},{7,4},   // 4-7  front ring
+    {0,4},{1,5},{2,6},{3,7},   // 8-11 pillars
+};
+const mesh_t MESH_CUBE = {
+    .verts     = _cube_verts,
+    .edges     = _cube_edges,
+    .n_verts   = 8,
+    .n_edges   = 12,
+    .faces     = NULL,
+    .edge_face = NULL,
+    .n_faces   = 0,
+};
 
 // ── MESH_SHIP — arrowhead/wedge pointing +Z ───────────────────────────────────
 // 6 vertices, 8 edges. Fits int8_t. Looks like a spaceship from the side.
@@ -16,7 +46,10 @@ static const uint8_t _ship_edges[8][2] = {
     {0, 3}, {0, 4},          // nose to fins
     {3, 5}, {4, 5},          // fins to tail
 };
-const mesh_t MESH_SHIP = {_ship_verts, _ship_edges, 6, 8};
+const mesh_t MESH_SHIP = {
+    .verts = _ship_verts, .edges = _ship_edges, .n_verts = 6, .n_edges = 8,
+    .faces = NULL, .edge_face = NULL, .n_faces = 0,
+};
 
 // ── MESH_ASTEROID — irregular rock ───────────────────────────────────────────
 // 12 vertices, 18 edges. Approximates a lumpy sphere.
@@ -42,7 +75,10 @@ static const uint8_t _ast_edges[18][2] = {
     { 4,  8}, { 5,  9},
     { 6,  9}, { 7, 11},
 };
-const mesh_t MESH_ASTEROID = {_ast_verts, _ast_edges, 12, 18};
+const mesh_t MESH_ASTEROID = {
+    .verts = _ast_verts, .edges = _ast_edges, .n_verts = 12, .n_edges = 18,
+    .faces = NULL, .edge_face = NULL, .n_faces = 0,
+};
 
 // ── MESH_BULLET — single line segment along +Z ────────────────────────────────
 // 2 vertices, 1 edge. Use small z value (e.g. z=150) to make it visible.
@@ -53,7 +89,10 @@ static const int8_t _blt_verts[2][3] = {
 static const uint8_t _blt_edges[1][2] = {
     {0, 1},
 };
-const mesh_t MESH_BULLET = {_blt_verts, _blt_edges, 2, 1};
+const mesh_t MESH_BULLET = {
+    .verts = _blt_verts, .edges = _blt_edges, .n_verts = 2, .n_edges = 1,
+    .faces = NULL, .edge_face = NULL, .n_faces = 0,
+};
 
 // ── MESH_DIAMOND — octahedron for pickups/collectibles ────────────────────────
 // 6 vertices, 12 edges.
@@ -70,4 +109,7 @@ static const uint8_t _dia_edges[12][2] = {
     {1, 2}, {1, 3}, {1, 4}, {1, 5},  // bottom to equator
     {2, 4}, {4, 3}, {3, 5}, {5, 2},  // equator ring
 };
-const mesh_t MESH_DIAMOND = {_dia_verts, _dia_edges, 6, 12};
+const mesh_t MESH_DIAMOND = {
+    .verts = _dia_verts, .edges = _dia_edges, .n_verts = 6, .n_edges = 12,
+    .faces = NULL, .edge_face = NULL, .n_faces = 0,
+};

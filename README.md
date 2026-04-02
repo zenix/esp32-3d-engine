@@ -19,7 +19,9 @@ The ESP32-C3 has no floating-point unit, so every float operation requires ~100 
 
 - **Q16.16 fixed-point arithmetic** — all spatial math uses 32-bit integers with a 16-bit fractional part
 - **256-entry sine LUT** — trig values pre-computed at boot (the only float usage); `uint8_t` angles wrap naturally, eliminating modulo ops
-- **Rodrigues axis-angle rotation** — single angle drives rotation around a fixed axis `k = normalize([3,2,1])`; Rx(45°) pre-tilt prevents any face from ever appearing face-on to the camera
+- **Rodrigues axis-angle rotation** — per-mesh axis preset (X/Y/Z or diagonal); Rx(45°) pre-tilt prevents any face from ever appearing face-on to the camera
+- **Near-plane edge clipping** — edges crossing z<10 are parametrically clipped, not clamped
+- **Depth-sorted draw order** — entities sorted back-to-front each frame so closer meshes correctly overdraw farther ones
 - **Bresenham line rasteriser** — integer only, no multiply or divide per pixel
 - **SSD1306 vertical-byte framebuffer** — `fb[page][col]`, full 1 KB frame pushed in one I2C burst per render cycle
 - **Fixed-timestep loop** — `vTaskDelayUntil()` targets 33 ms frames; entity velocities are per-frame for deterministic physics
@@ -65,41 +67,56 @@ main/
   input.h/c        Button input — debounced held/just_pressed/just_released
   font.h/c         5×7 bitmap font — draw_char, draw_string, draw_int
   sound.h/c        LEDC PWM buzzer — non-blocking sound effects
-  meshes.h/c       Built-in game meshes — SHIP, ASTEROID, BULLET, DIAMOND
+  meshes.h/c       Built-in game meshes — CUBE, SHIP, ASTEROID, BULLET, DIAMOND
   scene.h          Scene/state-machine types (header-only)
   game.h/c         Entity system, game context, built-in scenes
-  collision.h/c    Sphere-sphere and AABB collision detection
+  collision.h/c    Sphere-sphere collision detection
   particle.h/c     Single-pixel particle burst effects
+  demo.h/c         6-page interactive feature demo (boots by default)
   main.c           app_main — fixed-timestep game loop
 sdkconfig.defaults Project-level sdkconfig overrides
 esp.sh             Build/flash/monitor helper
 ```
+
+## Feature Demo
+
+The firmware boots into a 6-page interactive demo. Press **ACTION** to advance pages:
+
+| Page | Feature demonstrated |
+|---|---|
+| 1/6 | All 5 built-in meshes cycling one at a time |
+| 2/6 | Per-mesh scale (0.5×/1×/1.5×) and rotation axis (X/Y/Z) |
+| 3/6 | Backface culling on/off comparison |
+| 4/6 | Near-plane clipping — mesh drifts through z=10 cleanly |
+| 5/6 | Camera yaw (LEFT/RIGHT) + depth-sorted overdraw |
+| 6/6 | Collision detection + particle explosions + sound |
 
 ## Mesh API
 
 Define any wireframe object as a `const` vertex + edge array (stored in flash):
 
 ```c
-static const int8_t ship_verts[][3] = {
-    { 0, 20, 0}, {-15,-10, 0}, { 15,-10, 0}, { 0, -5, 0},
+static const int8_t my_verts[][3] = { {0,20,0}, {-15,-10,0}, {15,-10,0} };
+static const uint8_t my_edges[][2] = { {0,1}, {0,2}, {1,2} };
+const mesh_t MY_MESH = {
+    .verts = my_verts, .edges = my_edges, .n_verts = 3, .n_edges = 3,
+    .faces = NULL, .edge_face = NULL, .n_faces = 0,  // NULL = no backface culling
 };
-static const uint8_t ship_edges[][2] = {
-    {0,1}, {0,2}, {1,3}, {2,3},
-};
-const mesh_t MESH_SHIP = {ship_verts, ship_edges, 4, 4};
 ```
 
 `transform_t` fields:
 
-| Field | Description |
-|---|---|
-| `x`, `y` | Screen position offset (0,0 = centre) |
-| `z` | Depth — larger = further away = smaller on screen |
-| `angle` | Rotation, 0–255 maps to 0–360° |
+| Field | Type | Description |
+|---|---|---|
+| `x`, `y` | `int16_t` | World position offset (0,0 = centre) |
+| `z` | `int16_t` | Depth — larger = further = smaller on screen |
+| `angle` | `uint8_t` | Rotation, 0–255 maps to 0–360° |
+| `axis` | `uint8_t` | `AXIS_DEFAULT`/`AXIS_X`/`AXIS_Y`/`AXIS_Z` |
+| `scale` | `uint8_t` | 0 or 128 = 1.0×, 64 = 0.5×, 192 = 1.5× |
 
-Up to 64 vertices per mesh. Multiple meshes can be drawn each frame.
+All fields zero-initialise to sensible defaults (`AXIS_DEFAULT`, scale 1.0×).
 
-Built-in meshes: `MESH_CUBE`, `MESH_SHIP`, `MESH_ASTEROID`, `MESH_BULLET`, `MESH_DIAMOND`.
+Built-in meshes: `MESH_CUBE`, `MESH_SHIP`, `MESH_ASTEROID`, `MESH_BULLET`, `MESH_DIAMOND` (all in `meshes.h`).
 
 ## Game API
 
@@ -107,10 +124,9 @@ Built-in meshes: `MESH_CUBE`, `MESH_SHIP`, `MESH_ASTEROID`, `MESH_BULLET`, `MESH
 
 ```c
 input_init();
-// in game loop:
-input_poll();
-if (input_held(BTN_LEFT))        player.x -= 2;
-if (input_just_pressed(BTN_ACTION)) fire_bullet();
+input_poll();                              // call once per frame
+if (input_held(BTN_LEFT))       x -= 2;
+if (input_just_pressed(BTN_ACTION)) fire();
 ```
 
 ### Entities
@@ -119,16 +135,16 @@ if (input_just_pressed(BTN_ACTION)) fire_bullet();
 static game_t g;   // must be static
 game_init(&g);
 
-entity_t *ship = entity_spawn(&g, &MESH_SHIP, ETYPE_PLAYER);
-ship->fx = INT_FP(0);
-ship->fz = INT_FP(160);
-ship->collision_radius = INT_FP(15);
+entity_t *e = entity_spawn(&g, &MESH_SHIP, ETYPE_PLAYER);
+e->fx = INT_FP(0);  e->fz = INT_FP(160);
+e->transform.axis  = AXIS_Y;
+e->transform.scale = 128;
+e->collision_radius = INT_FP(15);
 
-// each frame:
-entity_update_positions(&g);
-entity_draw_all(&g, fb);
+entity_update_positions(&g);  // each frame
+entity_draw_all(&g, fb);      // depth-sorted, camera-aware
 
-entity_kill(ship);
+entity_kill(e);
 ```
 
 ### Scenes
@@ -142,8 +158,6 @@ const scene_t MY_SCENE = {
 };
 game_switch_scene(&g, &MY_SCENE);
 ```
-
-Built-in: `SCENE_TITLE`, `SCENE_GAMEPLAY`, `SCENE_PAUSE`, `SCENE_GAMEOVER`.
 
 ### Collision
 
@@ -162,7 +176,7 @@ void on_hit(entity_t *a, entity_t *b, game_t *g) {
 
 ```c
 g.camera.x   = player_x;
-g.camera.yaw = player_yaw;
+g.camera.yaw = player_yaw;   // 0–255 = 0–360°, Y-axis only
 g.camera_active = true;
 // entity_draw_all applies it automatically
 ```

@@ -7,6 +7,9 @@
 // All meshes are centred at the origin and sized for a comfortable on-screen
 // appearance at z ≈ 180.
 
+// Wireframe cube ±25 units.  8 verts, 12 edges, 12 tri-faces (backface culling enabled).
+extern const mesh_t MESH_CUBE;
+
 // Arrow/wedge shape pointing in +Z.  6 verts, 8 edges.
 extern const mesh_t MESH_SHIP;
 
