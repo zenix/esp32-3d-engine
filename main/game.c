@@ -103,7 +103,9 @@ static void title_exit(game_t *g)
 static void title_update(game_t *g, fp_t dt)
 {
     (void)dt;
-    s_title_angle += 2;
+    // GPIO2 = BTN_LEFT: hold to freeze the title cube rotation.
+    if (!input_held(BTN_LEFT))
+        s_title_angle += 2;
     for (int i = 0; i < MAX_ENTITIES; i++) {
         if (g->entities[i].active)
             g->entities[i].transform.angle = s_title_angle;
