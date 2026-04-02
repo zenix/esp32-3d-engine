@@ -1,0 +1,10 @@
+# sdkconfig.defaults — project-level overrides applied on first build or after fullclean.
+# Values here are merged into the generated sdkconfig; don't edit sdkconfig directly.
+
+# Increase main task stack: game_t (entity array + framebuffer) is static but
+# the main loop has a moderate call depth. 4096 bytes gives comfortable headroom.
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=4096
+
+# FreeRTOS tick rate: 100 Hz gives 10 ms tick resolution, which is fine for our
+# 33 ms frame period (3 ticks). Increase to 1000 Hz if sub-tick precision is needed.
+CONFIG_FREERTOS_HZ=100

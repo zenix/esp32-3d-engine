@@ -1,6 +1,7 @@
 #include "engine3d.h"
 #include "fixed_math.h"
 #include <stdlib.h>     // abs()
+#include <stdbool.h>
 
 // ── Limits ────────────────────────────────────────────────────────────────────
 #define ENGINE3D_MAX_VERTS  64      // max vertices supported per mesh
@@ -47,12 +48,22 @@ const mesh_t MESH_CUBE = {
     .n_edges = 12,
 };
 
-// ── Rasterisation ─────────────────────────────────────────────────────────────
-static inline void draw_pixel(uint8_t fb[8][128], int x, int y)
+// ── Camera state ──────────────────────────────────────────────────────────────
+static camera_t  g_cam;
+static bool      g_cam_active = false;
+
+void engine3d_set_camera(const camera_t *cam)
 {
-    if ((unsigned)x >= SCREEN_W || (unsigned)y >= SCREEN_H) return;
-    fb[y >> 3][x] |= (uint8_t)(1u << (y & 7));
+    if (cam) {
+        g_cam        = *cam;
+        g_cam_active = true;
+    } else {
+        g_cam_active = false;
+    }
 }
+
+// ── Rasterisation ─────────────────────────────────────────────────────────────
+// draw_pixel is now a public inline in engine3d.h — call it directly here.
 
 static void draw_line(uint8_t fb[8][128], int x0, int y0, int x1, int y1)
 {
@@ -62,7 +73,7 @@ static void draw_line(uint8_t fb[8][128], int x0, int y0, int x1, int y1)
     int sy = (y0 < y1) ? 1 : -1;
     int err = dx - dy;
     for (;;) {
-        draw_pixel(fb, x0, y0);
+        engine3d_draw_pixel(fb, x0, y0);
         if (x0 == x1 && y0 == y1) break;
         int e2 = err << 1;
         if (e2 > -dy) { err -= dy; x0 += sx; }
@@ -118,6 +129,22 @@ void engine3d_draw_mesh(uint8_t fb[8][128], const mesh_t *mesh, const transform_
         x += tx;
         y += ty;
         z += tz;
+
+        // Camera: inverse-translate then yaw rotation around Y axis.
+        if (g_cam_active) {
+            x -= INT_FP(g_cam.x);
+            y -= INT_FP(g_cam.y);
+            z -= INT_FP(g_cam.z);
+
+            // Rotate by -yaw around Y: x' = cos*x + sin*z, z' = -sin*x + cos*z
+            fp_t cyaw = fp_cos(g_cam.yaw);
+            fp_t syaw = fp_sin(g_cam.yaw);
+            fp_t nx =  FP_MUL(cyaw, x) + FP_MUL(syaw, z);
+            fp_t nz = -FP_MUL(syaw, x) + FP_MUL(cyaw, z);
+            x = nx;
+            z = nz;
+        }
+
         if (z < INT_FP(10)) z = INT_FP(10);
 
         // Perspective projection (Y negated: model Y-up → screen Y-down).
