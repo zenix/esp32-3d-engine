@@ -24,7 +24,7 @@
 #define MAP_W        20
 #define MAP_H        20
 
-#define PLAYER_TURN     3       // angle units per frame
+#define PLAYER_TURN     1       // angle units per frame
 #define PLAYER_SPEED    3       // world units per frame (forward/back)
 #define PLAYER_MARGIN   10      // collision margin in world units
 
@@ -271,9 +271,14 @@ static void do_shoot(void) {
         if (FP_INT(vz) < NEAR_PLANE) continue;
         if (vz >= hit_dist) continue;
 
-        // Is enemy near screen centre? (within ±5 pixels crosshair tolerance)
+        // Is enemy near screen centre?  Tolerance scales with sprite half-width
+        // so distant (small) enemies are still hittable (minimum ±5 px).
         int sx = FP_INT(FP_DIV(FP_MUL(vx, INT_FP(FOCAL)), vz)) + CENTER_X;
-        if (sx < CENTER_X - 5 || sx > CENTER_X + 5) continue;
+        int half_h = FP_INT(FP_DIV(INT_FP(48 * FOCAL / 2), vz));
+        if (half_h > CENTER_Y) half_h = CENTER_Y;
+        int tol = half_h / 2;   // sprite screen half-width
+        if (tol < 5) tol = 5;
+        if (sx < CENTER_X - tol || sx > CENTER_X + tol) continue;
 
         hit_idx  = i;
         hit_dist = vz;

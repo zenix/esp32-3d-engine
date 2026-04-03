@@ -7,10 +7,11 @@
 // Draws 2D sprites that always face the camera (billboards), depth-clipped
 // against the raycaster's per-column z-buffer.
 //
-// Each sprite type has a distinct silhouette encoded as an 8-column bitmap.
-// The sprite is projected to screen-space, scaled by distance, and drawn
-// column-by-column.  Any column occluded by a closer wall (from raycast_get_hits)
-// is skipped automatically.
+// Each sprite type is a 16×16 bitmap (uint16_t cols[16]).  The sprite is
+// projected to screen-space, scaled by distance, and rendered with a
+// clear-then-draw pass: the full sprite footprint is blacked out first, then
+// only opaque pixels are lit white.  This keeps sprites visible against any
+// wall pattern (solid, checkerboard, etc.) via a natural black-border cutout.
 //
 // Sprite center is at world Y = 0 and appears vertically centered on the
 // screen horizon (y = 32), matching the player eye height.
