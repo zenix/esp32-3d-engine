@@ -98,6 +98,14 @@ static const spr_def_t s_sprites[SPR_COUNT] = {
        0x001C, 0x0000, 0x0000, 0x0000 }},
 };
 
+// Integer square root (Newton's method, ~5 iterations for typical distances).
+static int isqrt(int n) {
+    if (n <= 0) return 0;
+    int x = n, y = 1;
+    while (x > y) { x = (x + y) >> 1; y = n / x; }
+    return x;
+}
+
 // ── billboard_draw ────────────────────────────────────────────────────────────
 
 bool billboard_draw(uint8_t fb[8][128],
@@ -125,8 +133,15 @@ bool billboard_draw(uint8_t fb[8][128],
     // ── Project sprite centre to screen ───────────────────────────────────────
     int sx = FP_INT(FP_DIV(FP_MUL(vx, INT_FP(FOCAL)), vz)) + CENTER_X;
 
-    // half_h = BASE_H * FOCAL / (2 * vz)  — screen half-height in pixels
-    int half_h = FP_INT(FP_DIV(INT_FP(SPR_BASE_H * FOCAL / 2), vz));
+    // Use Euclidean distance for sprite scaling so size doesn't change as the
+    // player turns (vz is perpendicular distance and shrinks at oblique angles,
+    // which would make sprites grow incorrectly when the player turns away).
+    int idx = FP_INT(dx), idz = FP_INT(dz);
+    fp_t dist_e = INT_FP(isqrt(idx * idx + idz * idz));
+    if (FP_INT(dist_e) < NEAR_PLANE) dist_e = INT_FP(NEAR_PLANE);
+
+    // half_h = BASE_H * FOCAL / (2 * dist_e)  — screen half-height in pixels
+    int half_h = FP_INT(FP_DIV(INT_FP(SPR_BASE_H * FOCAL / 2), dist_e));
     if (half_h < 1) return false;
     if (half_h > CENTER_Y) half_h = CENTER_Y;
 

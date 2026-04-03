@@ -273,10 +273,15 @@ static void do_shoot(void) {
 
         // Is enemy near screen centre?  Tolerance scales with sprite half-width
         // so distant (small) enemies are still hittable (minimum ±5 px).
+        // Use Euclidean distance for size (matches billboard_draw scaling).
         int sx = FP_INT(FP_DIV(FP_MUL(vx, INT_FP(FOCAL)), vz)) + CENTER_X;
-        int half_h = FP_INT(FP_DIV(INT_FP(48 * FOCAL / 2), vz));
+        int eidx = FP_INT(dx), eidz = FP_INT(dz);
+        int de = eidx*eidx + eidz*eidz;
+        { int a = de > 1 ? de : 1, b = 1; while (a > b) { a=(a+b)>>1; b=de/a; } de = a; }
+        if (de < NEAR_PLANE) de = NEAR_PLANE;
+        int half_h = (48 * FOCAL / 2) / de;
         if (half_h > CENTER_Y) half_h = CENTER_Y;
-        int tol = half_h / 2;   // sprite screen half-width
+        int tol = half_h / 2;
         if (tol < 5) tol = 5;
         if (sx < CENTER_X - tol || sx > CENTER_X + tol) continue;
 
