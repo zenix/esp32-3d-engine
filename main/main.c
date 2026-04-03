@@ -20,6 +20,7 @@
 #include "particle.h"
 #include "game.h"
 #include "asteroid.h"
+#include "doom.h"
 
 #define SDA_IO      9
 #define SCL_IO      8
@@ -42,7 +43,7 @@ void app_main(void)
     sound_init();
     particle_init();
     game_init(&g_game);
-    game_switch_scene(&g_game, &SCENE_ASTEROID_TITLE);
+    game_switch_scene(&g_game, &SCENE_DOOM_TITLE);
 
     TickType_t prev_wake = xTaskGetTickCount();
 

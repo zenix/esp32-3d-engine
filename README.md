@@ -25,6 +25,9 @@ The ESP32-C3 has no floating-point unit, so every float operation requires ~100 
 - **Bresenham line rasteriser** — integer only, no multiply or divide per pixel
 - **SSD1306 vertical-byte framebuffer** — `fb[page][col]`, full 1 KB frame pushed in one I2C burst per render cycle
 - **Fixed-timestep loop** — `vTaskDelayUntil()` targets 33 ms frames; entity velocities are per-frame for deterministic physics
+- **DDA raycaster** — 128 rays/frame through a 2D tile grid; perpendicular-distance wall height (fisheye-free); per-column depth buffer for sprite occlusion
+- **Dithered fill patterns** — 8 tiling patterns replace textures on the 1-bit display; N/S vs E/W face shading simulates directional lighting without any runtime light calculation
+- **Billboard sprites** — world objects projected and scaled by distance, clipped per-column against the raycaster depth buffer
 
 ## Requirements
 
@@ -72,8 +75,12 @@ main/
   game.h/c         Generic entity system and game context (no game-specific code)
   collision.h/c    Sphere-sphere collision detection
   particle.h/c     Single-pixel particle burst effects
+  pattern.h/c      Dithered fill patterns — 8 styles used as "textures" on 1-bit display
+  raycast.h/c      DDA raycaster — 128-ray 2.5D wall renderer with per-column depth buffer
+  billboard.h/c    Billboard sprites — distance-scaled, wall-depth-clipped 2D shapes
   demo.h/c         6-page interactive feature demo
-  asteroid.h/c     Asteroid Blaster game (boots by default)
+  asteroid.h/c     Asteroid Blaster game
+  doom.h/c         Corridor Crawler FPS (boots by default)
   main.c           app_main — fixed-timestep game loop; wires starting scene
 sdkconfig.defaults Project-level sdkconfig overrides
 esp.sh             Build/flash/monitor helper
@@ -81,12 +88,25 @@ esp.sh             Build/flash/monitor helper
 
 ## What boots by default
 
-The firmware boots into **Asteroid Blaster** — a 3D space shooter. Use the D-pad to move your ship, ACTION to fire bullets, destroy asteroids for points, and collect diamonds for bonuses. Difficulty scales with score.
+The firmware boots into **Corridor Crawler** — a Doom-style first-person shooter.
 
-To switch to the feature demo, change the starting scene in `main.c`:
+| Control | Action |
+|---|---|
+| LEFT / RIGHT | Turn |
+| UP / DOWN | Move forward / back |
+| ACTION | Shoot |
+
+Navigate a 20×20 tile maze, shoot enemies, and collect health and ammo pickups. Walls use dithered fill patterns to visually distinguish materials and simulate directional lighting (N/S faces appear brighter than E/W faces).
+
+To switch to other games, change the starting scene in `main.c`:
 ```c
-game_switch_scene(&g_game, &SCENE_DEMO);  // instead of SCENE_ASTEROID_TITLE
+game_switch_scene(&g_game, &SCENE_ASTEROID_TITLE);  // Asteroid Blaster
+game_switch_scene(&g_game, &SCENE_DEMO);            // feature demo
 ```
+
+## Asteroid Blaster
+
+A 3D space shooter. Use the D-pad to move your ship, ACTION to fire bullets, destroy asteroids for points, and collect diamonds for bonuses. Difficulty scales with score.
 
 ## Feature Demo
 
@@ -203,7 +223,8 @@ font_draw_int(fb, 42, 0, g.score);
 
 ```c
 sound_init();
-sound_play(SFX_SHOOT);     // SFX_SHOOT / EXPLODE / PICKUP / GAMEOVER
+sound_play(SFX_SHOOT);        // SFX_SHOOT / EXPLODE / PICKUP / GAMEOVER
+sound_play(SFX_DOOR_OPEN);    // SFX_DOOR_OPEN / ENEMY_HURT / PLAYER_HURT
 ```
 
 ### Particles
@@ -213,4 +234,42 @@ particle_spawn_burst(x, y, z, 8);
 // each frame:
 particle_update();
 particle_draw(fb, cam_x, cam_y, cam_z);
+```
+
+### Raycaster (2.5D FPS walls)
+
+```c
+// Define a tile map (keep cells mutable so doors can be opened)
+static uint8_t my_cells[W * H];  // 0=empty, MAP_WALL_1..4=solid
+raycast_map_t map = { my_cells, W, H, tile_shift };  // tile_shift=6 → 64-unit tiles
+
+// Each frame: cast 128 rays and draw walls
+raycast_render(fb, &map, player_x, player_z, yaw);
+
+// Depth buffer for sprite occlusion (valid until next raycast_render call)
+const ray_hit_t *hits = raycast_get_hits();  // hits[col].dist in Q16.16 world units
+```
+
+At `yaw=0` the player faces `+Z`. **`yaw++` turns left** (opposite of `engine3d` camera). Forward vector: `dx = -fp_sin(yaw)`, `dz = fp_cos(yaw)`.
+
+Wall types use paired fill patterns — N/S face (brighter) and E/W face (darker) — simulating directional lighting with zero runtime cost.
+
+### Billboard sprites
+
+```c
+// Draw a world-space sprite, depth-clipped against the raycast wall buffer.
+// Call raycast_render() first each frame.
+billboard_draw(fb, world_x, world_z, cam_x, cam_z, cam_yaw, SPR_ENEMY_IDLE);
+// SPR_ENEMY_IDLE / SPR_ENEMY_ATCK / SPR_HEALTH / SPR_AMMO / SPR_KEY
+```
+
+Sort sprites back-to-front by view-space Z before drawing for correct overdraw ordering.
+
+### Fill patterns
+
+```c
+// Vertical strip — hot path used by the raycaster (one call per screen column)
+pattern_vstrip(fb, x, y_top, y_bot, PAT_SOLID);    // 8 pattern IDs: PAT_SOLID..PAT_DIAG_R
+// Filled rectangle
+pattern_fill_rect(fb, x, y, w, h, PAT_CHECK);
 ```

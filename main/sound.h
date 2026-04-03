@@ -13,10 +13,13 @@
 // sound_* functions are safe to call without it (they become no-ops).
 
 typedef enum {
-    SFX_SHOOT    = 0,  // short laser-zap
-    SFX_EXPLODE  = 1,  // longer explosion rattle
-    SFX_PICKUP   = 2,  // ascending two-tone chime
-    SFX_GAMEOVER = 3,  // descending three-note phrase
+    SFX_SHOOT       = 0,  // short laser-zap
+    SFX_EXPLODE     = 1,  // longer explosion rattle
+    SFX_PICKUP      = 2,  // ascending two-tone chime
+    SFX_GAMEOVER    = 3,  // descending three-note phrase
+    SFX_DOOR_OPEN   = 4,  // mechanical sliding rumble
+    SFX_ENEMY_HURT  = 5,  // short impact hit
+    SFX_PLAYER_HURT = 6,  // descending pain tone
     SFX_COUNT,
 } sfx_id_t;
 

@@ -46,8 +46,12 @@ main/
   game.h/c         Generic entity system and game context (no game-specific code)
   collision.h/c    Sphere-sphere and AABB collision detection
   particle.h/c     Single-pixel particle burst effects
+  pattern.h/c      Dithered fill patterns — 8 styles used as "textures" on 1-bit display
+  raycast.h/c      DDA raycaster — 128-ray 2.5D wall renderer with per-column depth buffer
+  billboard.h/c    Billboard sprites — distance-scaled, wall-depth-clipped 2D shapes
   demo.h/c         6-page interactive feature demo
-  asteroid.h/c     Asteroid Blaster game (boots by default)
+  asteroid.h/c     Asteroid Blaster game
+  doom.h/c         Corridor Crawler FPS (boots by default)
   main.c           app_main — fixed-timestep game loop; wires starting scene
 sdkconfig.defaults Project-level sdkconfig overrides (stack size, tick rate)
 esp.sh             Build/flash/monitor helper
@@ -144,6 +148,9 @@ sound_play(SFX_SHOOT);               // non-blocking, cuts over current sound
 sound_play(SFX_EXPLODE);
 sound_play(SFX_PICKUP);
 sound_play(SFX_GAMEOVER);
+sound_play(SFX_DOOR_OPEN);
+sound_play(SFX_ENEMY_HURT);
+sound_play(SFX_PLAYER_HURT);
 sound_stop();                        // silence immediately
 ```
 
@@ -189,7 +196,7 @@ const scene_t MY_SCENE = {
 game_switch_scene(&g, &MY_SCENE);
 ```
 
-Game scenes live in their own files: `SCENE_DEMO` (`demo.h`), `SCENE_ASTEROID_TITLE/PLAY/OVER` (`asteroid.h`). `game.h/c` contains no scenes — add your own the same way.
+Game scenes live in their own files: `SCENE_DEMO` (`demo.h`), `SCENE_ASTEROID_TITLE/PLAY/OVER` (`asteroid.h`), `SCENE_DOOM_TITLE/PLAY/OVER` (`doom.h`). `game.h/c` contains no scenes — add your own the same way.
 
 ### Collision
 
@@ -210,6 +217,62 @@ particle_spawn_burst(x, y, z, 8);              // 8 pixels explode outward
 particle_update();                             // advance physics (call each frame)
 particle_draw(fb, cam.x, cam.y, cam.z);        // project and draw
 ```
+
+## Pattern API
+
+```c
+// Draw a vertical strip at column x with a dithered fill (the "texture" system).
+pattern_vstrip(fb, x, y_top, y_bot, PAT_SOLID);    // 100% fill
+pattern_vstrip(fb, x, y_top, y_bot, PAT_CHECK);    // 50% checkerboard
+pattern_vstrip(fb, x, y_top, y_bot, PAT_VSTRIPE);  // 50% vertical stripes
+pattern_vstrip(fb, x, y_top, y_bot, PAT_HSTRIPE);  // 50% horizontal stripes
+pattern_vstrip(fb, x, y_top, y_bot, PAT_SPARSE);   // 25% dots
+pattern_vstrip(fb, x, y_top, y_bot, PAT_DENSE);    // 75% dots
+pattern_vstrip(fb, x, y_top, y_bot, PAT_DIAG_L);   // 25% diagonal (\)
+pattern_vstrip(fb, x, y_top, y_bot, PAT_DIAG_R);   // 25% diagonal (/)
+
+pattern_fill_rect(fb, x, y, w, h, PAT_CHECK);      // filled rectangle
+```
+
+Middle SSD1306 pages are written with a single byte OR (no masking) — the hot path for the raycaster.
+
+## Raycaster API
+
+```c
+// Map descriptor — cells[] may be mutable (game writes 0 to open doors).
+raycast_map_t map = {
+    .cells      = my_cells,    // uint8_t[width * height], row-major
+    .width      = 20,
+    .height     = 20,
+    .tile_shift = 6,           // tile_size = 64 world units
+};
+
+// Cell values: MAP_EMPTY(0), MAP_WALL_1..4 (each with distinct pattern pair)
+// N/S face (side=0): solid/hstripe/dense/diag-L for wall types 1-4
+// E/W face (side=1): checkerboard/sparse/check/diag-R (visually darker = lighting)
+
+raycast_render(fb, &map, player_x, player_z, yaw);  // cast 128 rays, draw walls
+const ray_hit_t *hits = raycast_get_hits();         // 128-entry depth buffer for sprites
+// hits[col].dist  — perpendicular wall distance (Q16.16 world units)
+// hits[col].wall_type / hits[col].side
+```
+
+**Coordinate system:** at `yaw=0` the player faces `+Z`. `yaw++` rotates the view **left** (counterclockwise from above). This is the **opposite** of `engine3d` camera yaw (where `yaw++` = turn right). Use `BTN_LEFT → yaw++` and `BTN_RIGHT → yaw--` in raycaster-based games.
+
+**Forward movement** with raycaster yaw: `dx = -fp_sin(yaw)`, `dz = fp_cos(yaw)`.
+
+## Billboard API
+
+```c
+// Draw a distance-scaled sprite at world position (wx, wz), depth-clipped against
+// the raycast depth buffer. Call raycast_render() first each frame.
+bool visible = billboard_draw(fb, wx, wz, cam_x, cam_z, cam_yaw, SPR_ENEMY_IDLE);
+
+// Sprite IDs: SPR_ENEMY_IDLE, SPR_ENEMY_ATCK, SPR_HEALTH, SPR_AMMO, SPR_KEY
+// Returns true if any column was drawn (useful for visibility queries).
+```
+
+Sprites are depth-clipped column-by-column against `raycast_get_hits()`. Draw back-to-front (sort by descending `vz`) for correct painter's-algorithm ordering.
 
 ## Key design rules
 

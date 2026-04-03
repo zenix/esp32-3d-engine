@@ -30,11 +30,24 @@ static const note_t sfx_gameover[] = {
     {880, 150}, {660, 150}, {440, 300}, {0, 0},
 };
 
+static const note_t sfx_door_open[] = {
+    {1400, 40}, {1600, 40}, {1800, 60}, {1600, 80}, {0, 0},
+};
+static const note_t sfx_enemy_hurt[] = {
+    {2200, 30}, {1600, 40}, {0, 0},
+};
+static const note_t sfx_player_hurt[] = {
+    {1760, 60}, {1400, 60}, {1220, 80}, {0, 0},
+};
+
 static const note_t * const sfx_table[SFX_COUNT] = {
     sfx_shoot,
     sfx_explode,
     sfx_pickup,
     sfx_gameover,
+    sfx_door_open,
+    sfx_enemy_hurt,
+    sfx_player_hurt,
 };
 
 // ── Playback state ────────────────────────────────────────────────────────────
